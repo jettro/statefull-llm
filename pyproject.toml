@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "statefull-llm"
+version = "0.1.0"
+description = "Experiment to give an LLM state"
+authors = ["Jettro Coenradie"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+openai = "^1.56.0"
+python-dotenv = "^1.0.1"
+pydantic = "^2.10.3"
+streamlit = "^1.40.2"
+
+
+[tool.poetry.group.dev.dependencies]
+watchdog = "^6.0.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
