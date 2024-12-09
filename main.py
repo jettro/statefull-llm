@@ -1,10 +1,10 @@
 import logging
-import streamlit as st
 
+import streamlit as st
 from openai import OpenAI
 
 from change_state import set_nested_value
-from model import StateChanges, StateChange, LLMState, Job, Experience
+from model import StateChanges, LLMState, Job, Experience
 
 system_message_extract = f"""You are a CV writing assistant. You need specific information to help me write a my CV. You keep track of the information I provide you in a state object. 
 You can ask me questions to get more information. I can ask you to remove items from the state. Your goal is to gather as much information from me as possible. You tell me 
@@ -23,7 +23,7 @@ Ask me a question about the vacancy or my experience to add required information
 
 def extract_state_change(client: OpenAI, state: LLMState, user_message: str) -> StateChanges:
     chat_completion = client.beta.chat.completions.parse(
-        model="gpt-4o-mini",
+        model="gpt-4o",
         messages=[
             {"role": "system", "content": system_message_extract},
             {"role": "user", "content": f"{user_message}\nstate: {state.model_dump_json()}"},
@@ -36,7 +36,7 @@ def extract_state_change(client: OpenAI, state: LLMState, user_message: str) -> 
 
 def ask_for_next_step(client: OpenAI, state: LLMState) -> str:
     chat_completion = client.chat.completions.create(
-        model="gpt-4o-mini",
+        model="gpt-4o",
         messages=[
             {"role": "system", "content": system_message},
             {"role": "user", "content": f"state: {state.model_dump_json()}"},
