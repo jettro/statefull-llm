@@ -8,7 +8,8 @@ from model import StateChanges, LLMState, Job, Experience
 
 system_message_extract = f"""You are a CV writing assistant. You need specific information to help me write a my CV. You keep track of the information I provide you in a state object. 
 You can ask me questions to get more information. I can ask you to remove items from the state. Your goal is to gather as much information from me as possible. You tell me 
-the change you made to the state. If no change is made you return {StateChanges().model_dump_json(indent=None)}. Else the change is a json document with the structure: 
+the change you made to the state. Focus on one topic at the time. Start with completing the vacancy before moving on to the experience. 
+If no change is made you return {StateChanges().model_dump_json(indent=None)}. Else the change is a json document with the structure: 
 {StateChanges.model_json_schema()}.
 
 The format of the state has the next schema:
@@ -37,6 +38,7 @@ def extract_state_change(client: OpenAI, state: LLMState, user_message: str) -> 
 def ask_for_next_step(client: OpenAI, state: LLMState) -> str:
     chat_completion = client.chat.completions.create(
         model="gpt-4o",
+        temperature=0,
         messages=[
             {"role": "system", "content": system_message},
             {"role": "user", "content": f"state: {state.model_dump_json()}"},
