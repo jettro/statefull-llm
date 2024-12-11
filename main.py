@@ -1,10 +1,12 @@
 import logging
+import openlit
 
 import streamlit as st
 from openai import OpenAI
 
 from change_state import set_nested_value
 from model import StateChanges, LLMState, Job, Experience
+from dotenv import load_dotenv
 
 system_message_extract = f"""You are a CV writing assistant. You need specific information to help me write a my CV. You keep track of the information I provide you in a state object. 
 You can ask me questions to get more information. I can ask you to remove items from the state. Your goal is to gather as much information from me as possible. You tell me 
@@ -23,6 +25,14 @@ Ask me a question about the vacancy or my experience to add required information
 
 
 def extract_state_change(client: OpenAI, state: LLMState, user_message: str) -> StateChanges:
+    """
+    Uses the LLM to extract the state changes from the user message.
+
+    :param client: The OpenAI client.
+    :param state: The current state of the LLM.
+    :param user_message: The  user message to extract the change from
+    :return: The changes extracted from the user message.
+    """
     chat_completion = client.beta.chat.completions.parse(
         model="gpt-4o",
         messages=[
@@ -31,11 +41,18 @@ def extract_state_change(client: OpenAI, state: LLMState, user_message: str) -> 
         ],
         response_format=StateChanges,
     )
-    logger.info(chat_completion.choices[0].message.parsed)
-    return chat_completion.choices[0].message.parsed
+    response_format = chat_completion.choices[0].message.parsed
+    logger.info(response_format)
+    return response_format
 
 
 def ask_for_next_step(client: OpenAI, state: LLMState) -> str:
+    """
+    With the updated state, ask the LLM for the next step in information gathering.
+    :param client: The OpenAI client.
+    :param state:  The updated state.
+    :return: The message from the LLM containing the next step for the user.
+    """
     chat_completion = client.chat.completions.create(
         model="gpt-4o",
         temperature=0,
@@ -44,11 +61,22 @@ def ask_for_next_step(client: OpenAI, state: LLMState) -> str:
             {"role": "user", "content": f"state: {state.model_dump_json()}"},
         ]
     )
-    logger.info(chat_completion.choices[0].message.content)
-    return chat_completion.choices[0].message.content
+    response_format = chat_completion.choices[0].message.content
+    logger.info(response_format)
+    return response_format
 
 
 def main_loop(client: OpenAI, state: LLMState, historic_changes: StateChanges, user_message: str) -> str:
+    """
+    The main loop of the application. Extracts the state changes from the user message, updates the state,
+    and asks for the next step.
+
+    :param client: The OpenAI client.
+    :param state: The current state of the LLM.
+    :param historic_changes:  The historic changes made to the state.
+    :param user_message: The user message to extract the changes from.
+    :return: The next step for the user.
+    """
     changes = extract_state_change(client, state, user_message)
 
     for change in changes.changes:
@@ -71,6 +99,8 @@ def init_session():
         st.session_state.llm_state = LLMState(vacancy=Job(), experience=Experience())
     if "historic_changes" not in st.session_state:
         st.session_state.historic_changes = StateChanges()
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
 
 
 def main():
@@ -83,10 +113,6 @@ def main():
 
     st.title("Stateful LLMs")
     main_col, status_col = st.columns([2, 1])
-
-    # Initialize chat history
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
 
     with main_col:
         # Display chat messages from history on app rerun
@@ -131,7 +157,6 @@ def main():
             for change in reversed(historic_changes.changes[-10:]):
                 st.write(f"{change.change} - {change.field} - {change.value}")
 
-from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -139,5 +164,7 @@ logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(name)s - %(le
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-st.set_page_config(page_title='RAG4P GUI', page_icon='🧠', layout='wide')
+openlit.init(otlp_endpoint="http://127.0.0.1:4318")
+
+st.set_page_config(page_title='Stateful LLMs', page_icon='🧠', layout='wide')
 main()
